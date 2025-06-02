@@ -13,6 +13,9 @@ databases:
   sqlite:
     name: sqlite3
     driverPkg: github.com/mattn/go-sqlite3
+  mongodb:
+    name: mongodb
+    driverPkg: go.mongodb.org/mongo-driver/mongo
 
 orms:
   gorm:
@@ -21,6 +24,9 @@ orms:
   sqlx:
     name: sqlx
     importPath: github.com/jmoiron/sqlx
+  mongo-driver:
+    name: mongo-driver
+    importPath: go.mongodb.org/mongo-driver/mongo
 
 combinations:
   postgres:
@@ -50,6 +56,30 @@ combinations:
     sqlx:
       dsnTemplate: ""
       initFunc: ""
+  mongodb:
+    mongo-driver:
+      dsnTemplate: "mongodb://%s:%s@localhost:27017/%s"
+      initFunc: |
+        var err error
+        dsn := "mongodb://localhost:27017/your_database_name"
+      
+        ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+        defer cancel()
+      
+        client, err := mongo.Connect(ctx, options.Client().ApplyURI(dsn))
+        if err != nil {
+          panic(fmt.Errorf("failed to connect to MongoDB: %w", err))
+        }
+      
+        if err := client.Ping(ctx, nil); err != nil {
+          panic(fmt.Errorf("failed to ping MongoDB: %w", err))
+        }
+      
+        DB = client.Database("your_database_name")
+        fmt.Println("Connected to MongoDB")
+      additionalImports:
+        - go.mongodb.org/mongo-driver/mongo
+        - go.mongodb.org/mongo-driver/mongo/options
 
 migrationCode:
   gorm: |
@@ -65,7 +95,7 @@ migrationCode:
       migrations := []string{
       // Add your migration SQL here
       // "CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, name TEXT, email TEXT);",
-      // "CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, title TEXT, content TEXT, user_id INTEGER);",
+      // "CREATE TABLE IF NOT EXISTS posts (id INTEGER PRIMARY KEY, title TEXT, content TEXT, userid INTEGER);",
       }
       fmt.Println("Running migrations")
       for _, migration := range migrations {
@@ -74,5 +104,43 @@ migrationCode:
           fmt.Errorf("failed to run migrations: %w", err)
         }
       }
+  mongo-driver: |
+    fmt.Println("MongoDB typically does not require migrations, but you can ensure collections or indexes here.")
+
+    ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+    defer cancel()
+
+    collection := DB.Collection("users")
+    
+    // Create an index on the email field for better performance
+    indexModel := mongo.IndexModel{
+        Keys:    map[string]interface{}{"email": 1},
+        Options: options.Index().SetUnique(true),
+    }
+    
+    _, err := collection.Indexes().CreateOne(ctx, indexModel)
+    if err != nil {
+        fmt.Printf("Warning: Failed to create index: %v\n", err)
+    }
+    
+    // Insert initial document if collection is empty
+    count, err := collection.CountDocuments(ctx, map[string]interface{}{})
+    if err != nil {
+        return fmt.Errorf("failed to count documents: %w", err)
+    }
+    
+    if count == 0 {
+        _, err := collection.InsertOne(ctx, map[string]interface{}{
+            "init":       true,
+            "created_at": time.Now(),
+        })
+        if err != nil {
+            return fmt.Errorf("failed to insert initial document: %w", err)
+        }
+        fmt.Println("Initial document inserted successfully")
+    }
+    
+    fmt.Println("MongoDB migration completed successfully")
+
   default: |
     fmt.Println("No specific migration logic for this ORM. Implement custom migration logic here.")

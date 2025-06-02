@@ -92,7 +92,6 @@ func runGoModCommands(projectName string) error {
 
 	commands := [][]string{
 		{"go", "mod", "tidy"},
-		{"go", "mod", "vendor"},
 	}
 
 	for _, cmdArgs := range commands {
@@ -110,12 +109,22 @@ func runGoModCommands(projectName string) error {
 }
 
 func runGoImports(projectDir string) error {
-	// Run goimports on the entire project directory
 	cmd := exec.Command("goimports", "-w", projectDir)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if err := cmd.Run(); err != nil {
+	err := cmd.Run()
+	if err != nil {
+		if execErr, ok := err.(*exec.Error); ok && execErr.Err == exec.ErrNotFound {
+			fmt.Println("goimports not found, falling back to gofmt")
+			cmdFmt := exec.Command("gofmt", "-w", projectDir)
+			cmdFmt.Stdout = os.Stdout
+			cmdFmt.Stderr = os.Stderr
+			if err := cmdFmt.Run(); err != nil {
+				return fmt.Errorf("gofmt command failed for directory %s: %v", projectDir, err)
+			}
+			return nil
+		}
 		return fmt.Errorf("goimports command failed for directory %s: %v", projectDir, err)
 	}
 

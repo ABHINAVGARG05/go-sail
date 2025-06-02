@@ -17,8 +17,7 @@ func GenerateDatabaseFile(ctx context.Context, folderPath string, provider Provi
 	}
 
 	filename := filepath.Join(folderPath, "database.go")
-	tmpl, err := template.New("database").Parse(`
-package initializers
+	tmpl, err := template.New("database").Parse(`package initializers
 
 import (
     "fmt"
@@ -70,8 +69,7 @@ func GenerateMigrationFile(ctx context.Context, folderPath string, provider Prov
 	}
 
 	filename := filepath.Join(folderPath, "migrations.go")
-	tmpl, err := template.New("migration").Parse(`
-package initializers
+	tmpl, err := template.New("migration").Parse(`package initializers
 
 import (
     "fmt"
