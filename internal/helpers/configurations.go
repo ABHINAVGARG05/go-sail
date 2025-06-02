@@ -15,46 +15,96 @@ type Provider interface {
 	GetDBVariable() string
 }
 
-type CombinationProvider struct {
+type DBProvider struct {
 	Database      models.DatabaseConfig
 	ORM           models.ORMConfig
 	Combination   models.CombinationConfig
 	MigrationCode string
 }
 
-func (cp *CombinationProvider) GetImports() []string {
-	imports := []string{
-		fmt.Sprintf("%q", cp.Database.DriverPkg),
-		fmt.Sprintf("%q", cp.ORM.ImportPath),
+func (p *DBProvider) GetImports() []string {
+	importMap := make(map[string]bool)
+	var imports []string
+
+	// Include ORM import path if available
+	if p.ORM.ImportPath != "" {
+		importPath := fmt.Sprintf("%q", p.ORM.ImportPath)
+		if !importMap[importPath] {
+			imports = append(imports, importPath)
+			importMap[importPath] = true
+		}
 	}
-	for _, additionalImport := range cp.Combination.AdditionalImports {
-		imports = append(imports, fmt.Sprintf("%q", additionalImport))
+	if p.Database.Name == "mongodb" {
+		extraImports := []string{"time", "context"}
+		for _, imp := range extraImports {
+			formatted := fmt.Sprintf("%q", imp)
+			if !importMap[formatted] {
+				imports = append(imports, formatted)
+				importMap[formatted] = true
+			}
+		}
+
+		for _, additionalImport := range p.Combination.AdditionalImports {
+			importPath := fmt.Sprintf("%q", additionalImport)
+			if !importMap[importPath] {
+				imports = append(imports, importPath)
+				importMap[importPath] = true
+			}
+		}
+	}
+	
+	if p.Database.DriverPkg != "" {
+		importPath := fmt.Sprintf("%q", p.Database.DriverPkg)
+		if !importMap[importPath] {
+			imports = append(imports, importPath)
+			importMap[importPath] = true
+		}
 	}
 
 	return imports
 }
 
-func (cp *CombinationProvider) GetConnectionCode() string {
-	return fmt.Sprintf(`
-    var err error
+func (p *DBProvider) GetConnectionCode() string {
+	if p.Database.Name == "mongodb" {
+		return `var err error
+    dsn := "mongodb://localhost:27017/your_database_name"
+    
+    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer cancel()
+    
+    client, err := mongo.Connect(ctx, options.Client().ApplyURI(dsn))
+    if err != nil {
+        panic(fmt.Errorf("failed to connect to MongoDB: %w", err))
+    }
+    
+    if err := client.Ping(ctx, nil); err != nil {
+        panic(fmt.Errorf("failed to ping MongoDB: %w", err))
+    }
+    
+    DB = client.Database("your_database_name")
+    fmt.Println("Connected to MongoDB")`
+	}
+
+	return fmt.Sprintf(`var err error
     dsn := fmt.Sprintf(%q, "your_username", "your_password", "your_database")
     DB, err = %s
     if err != nil {
         fmt.Println("failed to connect to database")
     }
-    fmt.Println("Connect to database")
-    `, cp.Combination.DSNTemplate, cp.Combination.InitFunc)
+    fmt.Println("Connected to database")`, p.Combination.DSNTemplate, p.Combination.InitFunc)
 }
 
-func (cp *CombinationProvider) GetMigrationCode() string {
-	return cp.MigrationCode
+func (p *DBProvider) GetMigrationCode() string {
+	return p.MigrationCode 
 }
 
-func (cp *CombinationProvider) GetDBVariable() string {
-	return fmt.Sprintf("*%s.DB", cp.ORM.Name)
+func (p *DBProvider) GetDBVariable() string {
+	if p.Database.Name == "mongodb" {
+		return "*mongo.Database"
+	}
+	return fmt.Sprintf("*%s.DB", p.ORM.Name)
 }
 
-// ProviderFactory creates a provider for a specific database and ORM combination
 func ProviderFactory(database, orm string) (Provider, error) {
 	dbConfig, dbExists := initializers.Config.Databases[database]
 	if !dbExists {
@@ -71,7 +121,7 @@ func ProviderFactory(database, orm string) (Provider, error) {
 		return nil, fmt.Errorf("combination configuration for database %q and ORM %q not found", database, orm)
 	}
 
-	return &CombinationProvider{
+	return &DBProvider{
 		Database:      dbConfig,
 		ORM:           ormConfig,
 		Combination:   combinationConfig,

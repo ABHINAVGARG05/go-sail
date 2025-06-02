@@ -8,8 +8,8 @@ import (
 )
 
 var frameworks = []string{"fiber", "gin", "echo"}
-var databases = []string{"postgres", "mysql", "None"}
-var orms = []string{"gorm", "sqlx", "None"}
+var databases = []string{"postgres", "mysql","mongodb", "None"}
+var orms = []string{"gorm", "sqlx","mongo-driver", "None"}
 
 func SelectFramework(ctx context.Context) (string, error) {
 	var framework string
@@ -49,7 +49,6 @@ func SelectDatabase(ctx context.Context) (string, error) {
 	go func() {
 		errCh <- survey.AskOne(prompt, &database)
 	}()
-
 	select {
 	case <-ctx.Done():
 		return "", errors.ErrInterrupt
