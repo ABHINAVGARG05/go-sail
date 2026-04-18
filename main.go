@@ -16,7 +16,10 @@ import (
 var rootCmd = &cobra.Command{
 	Use:   "go-sail",
 	Short: "A CLI for generating project templates for Go backend frameworks",
-	Long:  `go-sail is a CLI tool that generates project templates for Go backend frameworks like Fiber, Echo, and Gin, with pre-configured logging and caching, helping developers quickly set up and initialize projects. Users can choose their own database and ORM configurations, and go-sail generates the necessary files for the project.`,
+	Long: `go-sail is a CLI tool that generates project templates for Go backend
+frameworks like Fiber, Echo, and Gin, with pre-configured logging, caching,
+database, and ORM setups. It supports Docker and .env generation, module
+path renaming, and more.`,
 }
 
 func main() {
@@ -35,13 +38,17 @@ func main() {
 	}()
 
 	initializers.LoadConfig("config.yml")
+
 	rootCmd.AddCommand(cmd.CreateProjectCommand)
+	rootCmd.AddCommand(cmd.VersionCommand)
+	rootCmd.AddCommand(cmd.ListCommand)
 
 	if err := rootCmd.ExecuteContext(ctx); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 }
+
 func cleanup(projectName string) {
 	fmt.Println("\nReceived interrupt signal, exiting...")
 	if projectName != "" {
