@@ -14,12 +14,11 @@ var Config models.Config
 func LoadConfig(filename string) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatalf("error reading config file: %v", err) // Change this line
+		log.Fatalf("error reading config file: %v", err)
 	}
 
 	err = yaml.Unmarshal(data, &Config)
 	if err != nil {
-		log.Fatalf("error parsing config file: %v", err) // Change this line
+		log.Fatalf("error parsing config file: %v", err)
 	}
-	//fmt.Printf("Loaded Config: %+v\n", Config)
 }

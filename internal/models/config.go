@@ -1,11 +1,12 @@
 package models
 
 type Config struct {
-	Repositories  map[string]string                       `yaml:"repositories"`
-	Databases     map[string]DatabaseConfig               `yaml:"databases"`
-	ORMs          map[string]ORMConfig                    `yaml:"orms"`
-	Combinations  map[string]map[string]CombinationConfig `yaml:"combinations"`
-	MigrationCode map[string]string                       `yaml:"migrationCode"`
+	Repositories    map[string]string                       `yaml:"repositories"`
+	Databases       map[string]DatabaseConfig               `yaml:"databases"`
+	ORMs            map[string]ORMConfig                    `yaml:"orms"`
+	Combinations    map[string]map[string]CombinationConfig `yaml:"combinations"`
+	MigrationCode   map[string]string                       `yaml:"migrationCode"`
+	TemplateModules map[string]string                       `yaml:"templateModules"`
 }
 
 type DatabaseConfig struct {

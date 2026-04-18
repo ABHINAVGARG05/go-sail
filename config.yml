@@ -3,6 +3,11 @@ repositories:
   echo: https://github.com/TejasGhatte/echo-basic-template.git
   gin: https://github.com/TejasGhatte/gin-basic-template.git
 
+templateModules:
+  fiber: github.com/TejasGhatte/fiber-base-template
+  echo: github.com/TejasGhatte/echo-basic-template
+  gin: github.com/TejasGhatte/gin-basic-template
+
 databases:
   postgres:
     name: postgres
